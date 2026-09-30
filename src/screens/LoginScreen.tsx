@@ -1,771 +1,394 @@
-import React, { useState } from 'react';
-import { getData } from '../services/api';
-import { UserRole, ScreenId } from '../types';
+import React, { useState } from "react";
+import { UserRole, ScreenId } from "../types";
+import { getData } from "../services/api";
 
 interface LoginScreenProps {
   onLoginSuccess: (role: UserRole, user: any) => void;
   onNavigate: (screen: ScreenId) => void;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({
+type LoginRole = "mhs" | "dsn" | "adm";
+
+interface RoleMeta {
+  label: string;
+  placeholder: string;
+  user: string;
+  pass: string;
+  actualRole: UserRole;
+}
+
+export function LoginScreen({
   onLoginSuccess,
-}) => {
-  const [role, setRole] = useState<'mhs' | 'dsn' | 'adm'>('mhs');
+  onNavigate,
+}: LoginScreenProps) {
+  const [role, setRole] = useState<LoginRole>("mhs");
 
-  // ==============================
-  // DATA LOGIN DEFAULT
-  // ==============================
-  const [identity, setIdentity] = useState('230101001');
-  const [password, setPassword] = useState('mahasiswa123');
+  const [identity, setIdentity] =
+    useState("230101001");
 
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [password, setPassword] =
+    useState("mahasiswa123");
 
-  // ==============================
-  // DATA DEMO SESUAI GOOGLE SHEETS
-  // ==============================
-  const roleMeta = {
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const roleMeta: Record<LoginRole, RoleMeta> = {
     mhs: {
-      label: 'Nomor Induk Mahasiswa (NIM)',
-      placeholder: 'Contoh: 230101001',
-      icon: 'school',
-      user: '230101001',
-      pass: 'mahasiswa123',
-      actualRole: 'student' as UserRole,
+      label: "NIM",
+      placeholder: "Contoh: 230101001",
+      user: "230101001",
+      pass: "mahasiswa123",
+      actualRole: "student",
     },
 
     dsn: {
-      label: 'NIDN / NIP Dosen',
-      placeholder: 'Contoh: 198501152010121002',
-      icon: 'badge',
-      user: '198501152010121002',
-      pass: 'dosen123',
-      actualRole: 'lecturer' as UserRole,
+      label: "NIDN",
+      placeholder: "Contoh: 12345678",
+      user: "12345678",
+      pass: "dosen123",
+      actualRole: "lecturer",
     },
 
     adm: {
-      label: 'Username Administrator',
-      placeholder: 'Contoh: admin',
-      icon: 'admin_panel_settings',
-      user: 'admin',
-      pass: 'admin123',
-      actualRole: 'admin' as UserRole,
+      label: "Username",
+      placeholder: "Contoh: admin",
+      user: "admin",
+      pass: "admin123",
+      actualRole: "admin",
     },
   };
 
-  // ==============================
-  // PILIH ROLE
-  // ==============================
-  const handleRoleSelect = (r: 'mhs' | 'dsn' | 'adm') => {
-    setRole(r);
+  const handleRoleSelect = (
+    selectedRole: LoginRole
+  ) => {
+    setRole(selectedRole);
 
-    setIdentity(roleMeta[r].user);
-    setPassword(roleMeta[r].pass);
+    const selected =
+      roleMeta[selectedRole];
 
-    setLoginSuccess(false);
+    setIdentity(selected.user);
+    setPassword(selected.pass);
   };
 
-  // ==============================
-  // LOGIN
-  // ==============================
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
+    if (!identity.trim() || !password.trim()) {
+      alert(
+        "NIM/NIDN/Username dan password harus diisi."
+      );
+      return;
+    }
 
     setIsLoading(true);
-    setLoginSuccess(false);
 
     try {
-      console.log('=================================');
-      console.log('PROSES LOGIN SMARTPEOPLE');
-      console.log('=================================');
-
-      console.log('Identity yang dimasukkan:', identity);
-      console.log('Password yang dimasukkan:', password);
-      console.log('Role yang dipilih:', role);
-
-      // =================================
-      // AMBIL DATA USERS DARI GOOGLE SHEETS
-      // =================================
-
-      const users = await getData('users');
-
-      console.log('=================================');
-      console.log('DATA USERS DARI GOOGLE SHEETS');
-      console.log('=================================');
-
-      console.table(users);
-
-      console.log('Jumlah user:', users.length);
-
-      // =================================
-      // CEK SATU PER SATU USER
-      // =================================
-
-      console.log('=================================');
-      console.log('PEMERIKSAAN USER');
-      console.log('=================================');
-
-      users.forEach((item: any, index: number) => {
-        console.log(`User ke-${index + 1}`);
-
-        console.log(
-          'ID:',
-          JSON.stringify(String(item.id))
-        );
-
-        console.log(
-          'Username:',
-          JSON.stringify(String(item.username))
-        );
-
-        console.log(
-          'Password:',
-          JSON.stringify(String(item.password))
-        );
-
-        console.log(
-          'Role:',
-          JSON.stringify(String(item.role))
-        );
-
-        console.log(
-          'Reference ID:',
-          JSON.stringify(String(item.reference_id))
-        );
-
-        console.log('-----------------------------');
-      });
-
-      // =================================
-      // CARI USER
-      // =================================
-
-      const user = users.find(
-        (item: any) => {
-          const usernameSheet = String(
-            item.username ?? ''
-          ).trim();
-
-          const passwordSheet = String(
-            item.password ?? ''
-          ).trim();
-
-          const usernameInput = identity.trim();
-          const passwordInput = password.trim();
-
-          console.log(
-            'Membandingkan:',
-            JSON.stringify(usernameSheet),
-            '===',
-            JSON.stringify(usernameInput)
-          );
-
-          console.log(
-            'Password:',
-            JSON.stringify(passwordSheet),
-            '===',
-            JSON.stringify(passwordInput)
-          );
-
-          return (
-            usernameSheet === usernameInput &&
-            passwordSheet === passwordInput
-          );
-        }
+      console.log(
+        "Mencoba mengambil data users dari Google Sheets..."
       );
 
-      // =================================
-      // USER TIDAK DITEMUKAN
-      // =================================
+      const users = await getData("users");
+
+      console.log(
+        "Data users dari Google Sheets:",
+        users
+      );
+
+      const user = users.find(
+        (item: any) =>
+          String(item.username)
+            .trim()
+            .toLowerCase() ===
+            identity.trim().toLowerCase() &&
+          String(item.password).trim() ===
+            password.trim()
+      );
 
       if (!user) {
-        console.error('=================================');
-        console.error('LOGIN GAGAL');
-        console.error('=================================');
-
-        console.error(
-          'Tidak ditemukan user dengan:'
-        );
-
-        console.error(
-          'Username:',
-          identity
-        );
-
-        console.error(
-          'Password:',
-          password
-        );
-
         alert(
-          'Username/NIM/NIDN atau password salah.'
+          "NIM/NIDN/Username atau password salah."
         );
-
-        setIsLoading(false);
-
         return;
       }
 
-      // =================================
-      // USER DITEMUKAN
-      // =================================
-
-      console.log('=================================');
-      console.log('USER DITEMUKAN');
-      console.log('=================================');
-
-      console.log('User:', user);
-
       console.log(
-        'ID:',
-        user.id
+        "User yang berhasil login:",
+        user
       );
-
-      console.log(
-        'Username:',
-        user.username
-      );
-
-      console.log(
-        'Role:',
-        user.role
-      );
-
-      console.log(
-        'Reference ID:',
-        user.reference_id
-      );
-
-      // =================================
-      // TENTUKAN ROLE
-      // =================================
 
       let actualRole: UserRole;
 
-      if (user.role === 'mahasiswa') {
-
-        actualRole = 'student';
-
-      } else if (user.role === 'dosen') {
-
-        actualRole = 'lecturer';
-
-      } else if (user.role === 'admin') {
-
-        actualRole = 'admin';
-
+      if (
+        user.role === "mahasiswa" ||
+        user.role === "student"
+      ) {
+        actualRole = "student";
+      } else if (
+        user.role === "dosen" ||
+        user.role === "lecturer"
+      ) {
+        actualRole = "lecturer";
       } else {
-
-        console.error(
-          'Role tidak dikenali:',
-          user.role
-        );
-
-        alert(
-          'Role pengguna tidak dikenali.'
-        );
-
-        setIsLoading(false);
-
-        return;
+        actualRole = "admin";
       }
 
-      // =================================
-      // LOGIN BERHASIL
-      // =================================
-
-      console.log('=================================');
-      console.log('LOGIN BERHASIL');
-      console.log('=================================');
-
-      console.log(
-        'Actual Role:',
-        actualRole
+      onLoginSuccess(
+        actualRole,
+        user
       );
-
-      setLoginSuccess(true);
-
-      // =================================
-      // KIRIM USER KE APP.TSX
-      // =================================
-
-      setTimeout(() => {
-
-        onLoginSuccess(
-          actualRole,
-          user
-        );
-
-      }, 700);
 
     } catch (error) {
-
       console.error(
-        '================================='
+        "Login gagal:",
+        error
       );
-
-      console.error(
-        'ERROR LOGIN'
-      );
-
-      console.error(
-        '================================='
-      );
-
-      console.error(error);
 
       alert(
-        'Gagal terhubung ke server. Silakan coba lagi.'
+        "Gagal terhubung ke server. Silakan coba lagi."
       );
-
+    } finally {
       setIsLoading(false);
     }
   };
 
+  const currentMeta =
+    roleMeta[role];
+
   return (
-    <div className="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex items-center justify-center p-space-md">
-
-      <main className="w-full max-w-md">
-
-        <div className="flex flex-col w-full">
-
-          <div className="relative w-full bg-surface-container-lowest rounded-xl shadow-xl p-space-lg md:p-space-xl overflow-hidden border border-surface-container">
-
-            {/* Ambient Lighting Accents */}
-
-            <div className="absolute -top-24 -right-24 w-60 h-60 rounded-full bg-secondary/10 blur-2xl pointer-events-none"></div>
-
-            <div className="absolute -bottom-24 -left-24 w-60 h-60 rounded-full bg-primary-fixed/25 blur-2xl pointer-events-none"></div>
-
-            {/* Header / Logo */}
-
-            <div className="relative z-10 flex flex-col items-center text-center">
-
-              <div className="mb-space-sm flex items-center justify-center">
-
-                <img
-                  alt="SmartPeople Higher Education LMS"
-                  className="h-12 w-auto object-contain"
-                  src="https://lh3.googleusercontent.com/aida/AEtjO1WcK4gAGRRp8zhWVnd9qISYRvj0LMtg-AL6PWXAHD-6AI8BFlJW0WfGmibzmvD4pUkaldaje8ausWzg0pOSPftK0OyM6PbHvsCqadmnBL_VxplQBOf-KjFdRHhwYhZ48XJtEVxyhnNskdyRx9CZKO6gXhjOgiRm8P8z1q-zqXdXQmavJyS1DNqKHNyaI-4mIjxVR4JHvXW2Q07oX5cFhQfecgS1yZQURNTkZRrWbSloE1kFrTkMXj-V4mQ"
-                />
-
-              </div>
-
-              <p className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">
-                Smart Learning Management for Higher Education
-              </p>
-
-              <div className="w-12 h-0.5 bg-secondary-container mt-space-xs mb-space-md rounded-full"></div>
-
-            </div>
-
-            {/* Role Selector */}
-
-            <div className="relative z-10 mt-space-xs">
-
-              <label className="block font-label-sm text-label-sm text-on-surface-variant mb-space-xs text-center">
-                Pilih Peran Masuk
-              </label>
-
-              <div className="grid grid-cols-3 p-space-xs bg-surface-container rounded-lg gap-1">
-
-                {/* Mahasiswa */}
-
-                <button
-                  type="button"
-                  onClick={() => handleRoleSelect('mhs')}
-                  className={`flex items-center justify-center py-2 px-1 rounded-md font-label-sm text-label-sm transition-all duration-200 cursor-pointer ${
-                    role === 'mhs'
-                      ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-
-                  <span
-                    className={`material-symbols-outlined text-[16px] mr-1 ${
-                      role === 'mhs'
-                        ? 'text-secondary'
-                        : ''
-                    }`}
-                  >
-                    school
-                  </span>
-
-                  Mahasiswa
-
-                </button>
-
-                {/* Dosen */}
-
-                <button
-                  type="button"
-                  onClick={() => handleRoleSelect('dsn')}
-                  className={`flex items-center justify-center py-2 px-1 rounded-md font-label-sm text-label-sm transition-all duration-200 cursor-pointer ${
-                    role === 'dsn'
-                      ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-
-                  <span
-                    className={`material-symbols-outlined text-[16px] mr-1 ${
-                      role === 'dsn'
-                        ? 'text-secondary'
-                        : ''
-                    }`}
-                  >
-                    badge
-                  </span>
-
-                  Dosen
-
-                </button>
-
-                {/* Admin */}
-
-                <button
-                  type="button"
-                  onClick={() => handleRoleSelect('adm')}
-                  className={`flex items-center justify-center py-2 px-1 rounded-md font-label-sm text-label-sm transition-all duration-200 cursor-pointer ${
-                    role === 'adm'
-                      ? 'bg-surface-container-lowest text-primary shadow-sm font-semibold'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-
-                  <span
-                    className={`material-symbols-outlined text-[16px] mr-1 ${
-                      role === 'adm'
-                        ? 'text-secondary'
-                        : ''
-                    }`}
-                  >
-                    admin_panel_settings
-                  </span>
-
-                  Admin
-
-                </button>
-
-              </div>
-            </div>
-
-            {/* Login Form */}
-
-            <form
-              onSubmit={handleLogin}
-              className="relative z-10 mt-space-md flex flex-col gap-space-sm"
-            >
-
-              {/* Identity */}
-
-              <div>
-
-                <label className="block font-label-sm text-label-sm text-on-surface mb-1 font-semibold">
-                  {roleMeta[role].label}
-                </label>
-
-                <div className="relative flex items-center">
-
-                  <span className="material-symbols-outlined absolute left-3 text-outline text-xl pointer-events-none">
-                    {roleMeta[role].icon}
-                  </span>
-
-                  <input
-                    value={identity}
-                    onChange={(e) =>
-                      setIdentity(e.target.value)
-                    }
-                    placeholder={
-                      roleMeta[role].placeholder
-                    }
-                    required
-                    type="text"
-                    className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low text-on-surface rounded-lg font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/20 focus:outline-none transition-colors"
-                  />
-
-                </div>
-
-              </div>
-
-              {/* Password */}
-
-              <div>
-
-                <div className="flex items-center justify-between mb-1">
-
-                  <label className="block font-label-sm text-label-sm text-on-surface font-semibold">
-                    Kata Sandi
-                  </label>
-
-                  <a
-                    href="#forgot"
-                    onClick={(e) => {
-                      e.preventDefault();
-
-                      alert(
-                        'Tautan reset kata sandi telah dikirimkan ke email terdaftar.'
-                      );
-                    }}
-                    className="font-label-sm text-label-sm text-secondary hover:underline"
-                  >
-                    Lupa Password?
-                  </a>
-
-                </div>
-
-                <div className="relative flex items-center">
-
-                  <span className="material-symbols-outlined absolute left-3 text-outline text-xl pointer-events-none">
-                    lock
-                  </span>
-
-                  <input
-                    value={password}
-                    onChange={(e) =>
-                      setPassword(e.target.value)
-                    }
-                    placeholder="Masukkan kata sandi"
-                    required
-                    type={
-                      showPassword
-                        ? 'text'
-                        : 'password'
-                    }
-                    className="w-full pl-10 pr-10 py-2.5 bg-surface-container-low text-on-surface rounded-lg font-body-md text-body-md focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/20 focus:outline-none transition-colors"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword(
-                        !showPassword
-                      )
-                    }
-                    className="absolute right-3 flex items-center text-outline hover:text-on-surface focus:outline-none cursor-pointer"
-                  >
-
-                    <span className="material-symbols-outlined text-xl">
-                      {showPassword
-                        ? 'visibility_off'
-                        : 'visibility'}
-                    </span>
-
-                  </button>
-
-                </div>
-
-              </div>
-
-              {/* Remember Me */}
-
-              <div className="flex items-center justify-between mt-1">
-
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) =>
-                      setRememberMe(
-                        e.target.checked
-                      )
-                    }
-                    className="w-4 h-4 rounded bg-surface-container-low text-secondary accent-secondary focus:ring-0 cursor-pointer"
-                  />
-
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">
-                    Ingat sesi saya di perangkat ini
-                  </span>
-
-                </label>
-
-              </div>
-
-              {/* Login Button */}
+    <div className="min-h-screen bg-surface flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+
+        {/* Logo / Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-on-primary mb-4">
+            <span className="text-2xl font-bold">
+              SP
+            </span>
+          </div>
+
+          <h1 className="text-3xl font-bold text-on-surface">
+            SmartPeople
+          </h1>
+
+          <p className="mt-2 text-on-surface-variant">
+            Sistem Informasi Akademik
+          </p>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-surface-container-lowest rounded-3xl shadow-lg p-6 sm:p-8 border border-outline-variant">
+
+          <h2 className="text-xl font-bold text-on-surface mb-2">
+            Selamat Datang 👋
+          </h2>
+
+          <p className="text-sm text-on-surface-variant mb-6">
+            Silakan masuk untuk melanjutkan
+          </p>
+
+          {/* Role Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-on-surface mb-2">
+              Masuk sebagai
+            </label>
+
+            <div className="grid grid-cols-3 gap-2">
 
               <button
-                type="submit"
-                disabled={isLoading}
-                className="mt-space-xs w-full py-3 px-4 bg-primary-container hover:bg-primary text-on-primary font-headline-md text-headline-md rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                type="button"
+                onClick={() =>
+                  handleRoleSelect("mhs")
+                }
+                className={`py-3 px-2 rounded-xl text-sm font-medium border transition ${
+                  role === "mhs"
+                    ? "bg-primary text-on-primary border-primary"
+                    : "bg-surface text-on-surface border-outline-variant hover:bg-surface-container"
+                }`}
               >
-
-                {isLoading ? (
-                  <>
-
-                    <span className="material-symbols-outlined text-lg animate-spin">
-                      progress_activity
-                    </span>
-
-                    <span>
-                      Memvalidasi...
-                    </span>
-
-                  </>
-                ) : loginSuccess ? (
-                  <>
-
-                    <span className="material-symbols-outlined text-lg text-tertiary-fixed">
-                      check_circle
-                    </span>
-
-                    <span>
-                      Berhasil Masuk!
-                    </span>
-
-                  </>
-                ) : (
-                  <>
-
-                    <span>
-                      Masuk ke Sistem
-                    </span>
-
-                    <span className="material-symbols-outlined text-lg">
-                      arrow_forward
-                    </span>
-
-                  </>
-                )}
-
+                Mahasiswa
               </button>
 
-            </form>
+              <button
+                type="button"
+                onClick={() =>
+                  handleRoleSelect("dsn")
+                }
+                className={`py-3 px-2 rounded-xl text-sm font-medium border transition ${
+                  role === "dsn"
+                    ? "bg-primary text-on-primary border-primary"
+                    : "bg-surface text-on-surface border-outline-variant hover:bg-surface-container"
+                }`}
+              >
+                Dosen
+              </button>
 
-            {/* Demo Credentials */}
+              <button
+                type="button"
+                onClick={() =>
+                  handleRoleSelect("adm")
+                }
+                className={`py-3 px-2 rounded-xl text-sm font-medium border transition ${
+                  role === "adm"
+                    ? "bg-primary text-on-primary border-primary"
+                    : "bg-surface text-on-surface border-outline-variant hover:bg-surface-container"
+                }`}
+              >
+                Admin
+              </button>
 
-            <div className="relative z-10 mt-space-md p-space-sm bg-surface-container-low rounded-lg">
+            </div>
+          </div>
 
-              <div className="flex items-center justify-between mb-1">
+          {/* Login Form */}
+          <form
+            onSubmit={handleLogin}
+            className="space-y-5"
+          >
 
-                <div className="flex items-center gap-1.5 text-secondary">
+            {/* Identity */}
+            <div>
+              <label
+                htmlFor="identity"
+                className="block text-sm font-medium text-on-surface mb-2"
+              >
+                {currentMeta.label}
+              </label>
 
-                  <span className="material-symbols-outlined text-sm font-semibold">
-                    key
-                  </span>
+              <input
+                id="identity"
+                type="text"
+                value={identity}
+                onChange={(event) =>
+                  setIdentity(
+                    event.target.value
+                  )
+                }
+                placeholder={
+                  currentMeta.placeholder
+                }
+                className="w-full px-4 py-3 rounded-xl border border-outline-variant bg-surface text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                autoComplete="username"
+              />
+            </div>
 
-                  <span className="font-label-sm text-label-sm uppercase tracking-wide font-bold">
-                    Kredensial Pengujian (Demo)
-                  </span>
+            {/* Password */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-on-surface mb-2"
+              >
+                Password
+              </label>
 
-                </div>
-
-                <span className="font-code-sm text-code-sm text-outline-variant bg-surface-container px-1.5 py-0.5 rounded">
-                  Klik isi cepat
-                </span>
-
-              </div>
-
-              <div className="grid grid-cols-3 gap-1 mt-2">
-
-                {/* Mahasiswa */}
+              <div className="relative">
+                <input
+                  id="password"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Masukkan password"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border border-outline-variant bg-surface text-on-surface outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  autoComplete="current-password"
+                />
 
                 <button
                   type="button"
                   onClick={() =>
-                    handleRoleSelect('mhs')
+                    setShowPassword(
+                      !showPassword
+                    )
                   }
-                  className="flex flex-col text-left p-1.5 bg-surface-container-lowest hover:bg-surface-bright rounded transition-colors group cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 text-sm text-on-surface-variant hover:text-on-surface"
                 >
-
-                  <span className="font-label-sm text-label-sm text-secondary font-semibold group-hover:underline">
-                    Mahasiswa
-                  </span>
-
-                  <span className="font-code-sm text-code-sm text-on-surface-variant text-[11px]">
-                    230101001
-                  </span>
-
-                  <span className="font-code-sm text-code-sm text-outline text-[11px]">
-                    mahasiswa123
-                  </span>
-
+                  {showPassword
+                    ? "Sembunyikan"
+                    : "Lihat"}
                 </button>
-
-                {/* Dosen */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleRoleSelect('dsn')
-                  }
-                  className="flex flex-col text-left p-1.5 bg-surface-container-lowest hover:bg-surface-bright rounded transition-colors group cursor-pointer"
-                >
-
-                  <span className="font-label-sm text-label-sm text-secondary font-semibold group-hover:underline">
-                    Dosen
-                  </span>
-
-                  <span
-                    className="font-code-sm text-code-sm text-on-surface-variant truncate w-full text-[11px]"
-                    title="198501152010121002"
-                  >
-                    19850115...
-                  </span>
-
-                  <span className="font-code-sm text-code-sm text-outline text-[11px]">
-                    dosen123
-                  </span>
-
-                </button>
-
-                {/* Admin */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleRoleSelect('adm')
-                  }
-                  className="flex flex-col text-left p-1.5 bg-surface-container-lowest hover:bg-surface-bright rounded transition-colors group cursor-pointer"
-                >
-
-                  <span className="font-label-sm text-label-sm text-secondary font-semibold group-hover:underline">
-                    Admin
-                  </span>
-
-                  <span className="font-code-sm text-code-sm text-on-surface-variant text-[11px]">
-                    admin
-                  </span>
-
-                  <span className="font-code-sm text-code-sm text-outline text-[11px]">
-                    admin123
-                  </span>
-
-                </button>
-
               </div>
             </div>
 
-            {/* Footer */}
+            {/* Login Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3.5 rounded-xl bg-primary text-on-primary font-semibold transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isLoading
+                ? "Memproses..."
+                : "Masuk"}
+            </button>
 
-            <div className="relative z-10 mt-space-md pt-space-xs text-center">
+          </form>
 
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container rounded-full text-on-surface-variant mb-2">
+          {/* Demo Account Information */}
+          <div className="mt-6 p-4 rounded-xl bg-surface-container text-sm">
 
-                <span className="material-symbols-outlined text-[15px] text-tertiary-container">
-                  verified_user
-                </span>
+            <p className="font-semibold text-on-surface mb-3">
+              Akun Demo
+            </p>
 
-                <span className="font-label-sm text-label-sm">
-                  Dilindungi enkripsi sesi &amp; otentikasi role terintegrasi
-                </span>
+            <div className="space-y-3 text-on-surface-variant">
 
+              <div>
+                <p className="font-medium text-on-surface">
+                  Mahasiswa
+                </p>
+                <p>
+                  NIM: 230101001
+                </p>
+                <p>
+                  Password: mahasiswa123
+                </p>
               </div>
 
-              <p className="font-code-sm text-code-sm text-outline text-xs">
-                Terhubung ke Google Sheets • Google Apps Script
-              </p>
+              <div>
+                <p className="font-medium text-on-surface">
+                  Dosen
+                </p>
+                <p>
+                  NIDN: 12345678
+                </p>
+                <p>
+                  Password: dosen123
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium text-on-surface">
+                  Admin
+                </p>
+                <p>
+                  Username: admin
+                </p>
+                <p>
+                  Password: admin123
+                </p>
+              </div>
 
             </div>
-
           </div>
 
         </div>
 
-      </main>
+        {/* Footer */}
+        <p className="text-center text-xs text-on-surface-variant mt-6">
+          © 2026 SmartPeople
+        </p>
 
+      </div>
     </div>
   );
-};
+}

@@ -42,7 +42,6 @@ export function getData(table: string): Promise<any[]> {
     };
 
     script.src = url;
-
     script.async = true;
 
     script.onerror = (error) => {
